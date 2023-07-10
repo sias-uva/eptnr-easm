@@ -1,0 +1,3 @@
+
+class ActionAlreadyTakenError(Exception):
+    pass
