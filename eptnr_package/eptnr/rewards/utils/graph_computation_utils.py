@@ -24,7 +24,7 @@ def _evaluate_graph(g: ig.Graph) -> pd.DataFrame:
 
 
 def _generate_samples(metric_df: pd.DataFrame, inh_per_group: pd.DataFrame) -> pd.DataFrame:
-    merged_df = pd.merge(metric_df, inh_per_group, how='left', left_on='rc', right_on='neighborhood')
+    merged_df = pd.merge(metric_df, inh_per_group, how='left', left_on='rc', right_on='name')
 
     city = pd.DataFrame(columns=['metric_value', 'group'])
 

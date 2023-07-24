@@ -1,4 +1,4 @@
-name: trb-eptnr
+name: eptnr-easm
 channels:
   - conda-forge
   - defaults
@@ -7,6 +7,6 @@ dependencies:
   - gdal=3.6.2
   - pip
   - pip:
-      - ./eptnr_package
+      - -e ./eptnr_package
       - streamlit==1.22.0
       - jupyterlab==3.6.3

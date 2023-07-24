@@ -15,6 +15,7 @@ def get_melted_tt_df(graph: igraph.Graph, census: pd.DataFrame):
     melted_temp_tt = temp_tt_df.melt()[['group', 'value']]
     melted_temp_tt.value = pd.to_numeric(melted_temp_tt.value)
     melted_temp_tt['travel time'] = melted_temp_tt.value
+    del melted_temp_tt['value']
 
     return melted_temp_tt
 
@@ -32,6 +33,7 @@ def plot_travel_time_histogram(graph: igraph.Graph, census: pd.DataFrame, fig=No
         x='travel time',
         hue='group',
         multiple='dodge',
+        stat='proportion',
         kde=True,
         shrink=.75,
         bins=100,
@@ -40,15 +42,21 @@ def plot_travel_time_histogram(graph: igraph.Graph, census: pd.DataFrame, fig=No
     )
     ax.set_xlabel('Travel Time')
 
+    ymax = ax.get_ylim()[1]
+
     for group, color in zip(group_set, sns.color_palette('Set1')[:len(group_set)]):
         ax.vlines(
-            melted_temp_tt[melted_temp_tt['group'] == group].value.mean(),
+            melted_temp_tt[melted_temp_tt['group'] == group]['travel time'].mean(),
             ymin=0,
-            ymax=melted_temp_tt.groupby('group').value_counts().max(),
+            ymax=ymax,
             linestyles="dashed",
             colors=color,
             label=f"avg.tt. {group}",
         )
+
+    # Set the last quantile to be the 99th quantile
+    nn_percentile = melted_temp_tt.quantile(0.99)['travel time']
+    ax.set_xlim(None, nn_percentile)
 
     if (min_x is not None) and (max_x is not None):
         ax.set_xlim(min_x, max_x)

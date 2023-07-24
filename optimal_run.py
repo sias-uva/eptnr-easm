@@ -23,6 +23,11 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+def get_tt_stats(g: ig.Graph, census_df: pd.DataFrame):
+    melted_tt_df = get_melted_tt_df(g, census_df)
+    return melted_tt_df.groupby('group')['travel time'].agg(['mean', 'median', 'var']).reset_index()
+
+
 @click.command()
 @click.option('--edge_types', type=click.Choice(['METRO', 'BUS', 'TRAM', 'TRAIN']),
               multiple=True, default={'METRO'}, help='Type of edge')
@@ -43,9 +48,11 @@ def run_experiment(edge_types, budget, groups, graph_gml_file_path, census_gdf_f
     census: gpd.GeoDataFrame = gpd.read_parquet(census_gdf_file_path)
 
     # Set that all groups that should be considered and the edge types that can be removed
-    edge_types = set(edge_types)
+    edge_types = list(set(edge_types))
 
     reward = EgalitarianTheilReward(census_data=census, groups=groups, verbose=False)
+
+
 
     def set_seeds(seed: int = 2048):
         torch.manual_seed(seed)
@@ -55,10 +62,21 @@ def run_experiment(edge_types, budget, groups, graph_gml_file_path, census_gdf_f
     # Get total number of metro edges
     nr_total_edges = len(graph.es.select(type_in=edge_types))
     # Reduce by certain amount of percent
-    print(
+    logger.info(
         f"Budget is {budget}/{nr_total_edges} of graph edges of "
         f"type{'s' if len(edge_types) > 1 else ''} {', '.join(edge_types)}"
     )
+
+    logger.info("-----------------")
+
+    logger.info("Initial Inequality")
+    logger.info(f"{-reward.evaluate(graph)}")
+
+    logger.info("Original Travel Distributions")
+    tt_df = get_tt_stats(graph, census)
+    logger.info('\n' + tt_df.to_string(index=False))
+
+    logger.info("-----------------")
 
     set_seeds(random_seed)
     opt_edges = optimal_max_baseline(g=graph, reward=reward, edge_types=edge_types, budget=budget, verbose=False)
@@ -69,12 +87,13 @@ def run_experiment(edge_types, budget, groups, graph_gml_file_path, census_gdf_f
     opt_reduced_graph.delete_edges(edges_to_remove)
 
     logger.info(f"Removed edge{'s' if len(edges_to_remove) > 1 else ''} {str(edges_to_remove)} resulting "
-                f"in a Theil inequality of {t_inequality}")
+                f"in a Theil inequality of {-t_inequality}")
 
-    def get_tt_stats(g: ig.Graph, census_df: pd.DataFrame):
-        melted_tt_df = get_melted_tt_df(g, census_df)
-        return melted_tt_df.groupby('group')['travel time'].agg(['mean', 'median', 'var']).reset_index()
+    for edge in edges_to_remove:
+        e = graph.es[edge]
+        logger.info(f"Removed edges going from: {graph.vs[e.source]['name']} to: {graph.vs[e.target]['name']}")
 
+    logger.info("Updated Travel Distributions")
     tt_df = get_tt_stats(opt_reduced_graph, census)
     logger.info('\n' + tt_df.to_string(index=False))
 

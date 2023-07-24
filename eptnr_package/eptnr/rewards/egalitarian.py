@@ -9,7 +9,7 @@ from typing import List
 logger = logging.getLogger(__name__)
 
 
-class EgalitarianTheilReward(BaseReward):
+class EgalitarianTheilReward(BaseReward):   
     
     def __init__(self, census_data: pd.DataFrame, 
                  groups: List[str] = None,
